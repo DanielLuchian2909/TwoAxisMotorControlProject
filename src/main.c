@@ -106,12 +106,46 @@ int main(void)
 	
 	/*Initialize the motor parameters */
 	Motor_Param_Reg_Init();
+
+  //Initialize GPIO typedefs for pins PA8 and PA9
+  GPIO_InitTypeDef GPIO_InitStruct_PA8;
+  GPIO_InitTypeDef GPIO_InitStruct_PA9;
   
+  /* Enable the GPIOA Clock */
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+
+  /* Configure PA8 */
+  GPIO_InitStruct_PA8.Pin = GPIO_PIN_8; 
+  GPIO_InitStruct_PA8.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct_PA8.Pull = GPIO_PULLDOWN;
+  GPIO_InitStruct_PA8.Speed = GPIO_SPEED_FAST;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct_PA8);
+
+  /* Configure PA9 */
+  GPIO_InitStruct_PA9.Pin = GPIO_PIN_9; 
+  GPIO_InitStruct_PA9.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct_PA9.Pull = GPIO_PULLUP;
+  GPIO_InitStruct_PA9.Speed = GPIO_SPEED_FAST;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct_PA9);
+
+  //Declare the PA8 pin state to read from the pin
+  GPIO_PinState pa8State;
+
+  //Initialize the PA9 pin state to write to the pin (1 = High)
+  GPIO_PinState pa9State = 1;
+
   /* Infinite loop */
   while (1)
   {
     /* Check if any Application Command for L6470 has been entered by USART */
     USART_CheckAppCmd();
+
+    //Read the state of PA8 (state read using the debugger, confirmed to be low)
+    pa8State = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8);
+
+    //Write to PA9 (writing high to the pin, so it outputs to the led, confirmed to be working from the LED lighting up)
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, pa9State);
+
   }
 #endif
 }
