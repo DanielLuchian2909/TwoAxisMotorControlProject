@@ -35,6 +35,7 @@
 #include "stm32f4xx_it.h"
 #include "xnucleoihm02a1_interface.h"
 #include "example_usart.h"
+#include "L6470.h"
 
 /**
   * @addtogroup MicrosteppingMotor_Example
@@ -85,6 +86,84 @@ void EXTI1_IRQHandler(void)
 void EXTI0_IRQHandler(void)
 {
   HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
+}
+
+/**
+ * @brief This function handles EXTI Line[9:5] interrupt.
+ */
+void EXTI9_5_IRQHandler(void)
+{
+  //If the limit switch for the positive x-axis (M0) is triggered, 
+  //stop the motor and reverse it until the limit switch turns off
+  if(__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_8) != RESET)
+  {
+    //1) Clear the interrupt
+    __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_8); 
+
+    //2) Debounce the signal
+    for (volatile uint32_t i=0; i<50000; i++) {}
+
+    //3) If the the limit switch is still pressed, stop the motor and reverse it 3000 microsteps
+    if (!HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8))
+    {
+      L6470_HardStop(L6470_ID(0));
+      L6470_Move(L6470_ID(0), L6470_DIR_REV_ID, 3000);
+    }
+  }
+
+  //If the limit switch for the negative x-axis (M0) is triggered, 
+  //stop the motor and reverse it until the limit switch turns off
+  if(__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_9) != RESET)
+  {
+    //1) Clear the interrupt
+    __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_9); 
+
+    //2) Debounce the signal
+    for (volatile uint32_t i=0; i<50000; i++) {}
+
+    //3) If the the limit switch is still pressed, stop the motor and run it 3000 microsteps
+    if (!HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_9))
+    {
+      L6470_HardStop(L6470_ID(0));
+      L6470_Move(L6470_ID(0), L6470_DIR_FWD_ID, 3000);
+    }
+  }
+
+  //If the limit switch for the positive y-axis (M1) is triggered, 
+  //stop the motor and reverse it until the limit switch turns off
+  if(__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_6) != RESET)
+  {
+    //1) Clear the interrupt
+    __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_6); 
+
+    //2) Debounce the signal
+    for (volatile uint32_t i=0; i<50000; i++) {}
+
+    //3) If the the limit switch is still pressed, stop the motor and reverse it 3000 microsteps
+    if (!HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_6))
+    {
+      L6470_HardStop(L6470_ID(1));
+      L6470_Move(L6470_ID(1), L6470_DIR_REV_ID, 3000);
+    }
+  }
+
+  //If the limit switch for the negative y-axis (M1) is triggered, 
+  //stop the motor and reverse it until the limit switch turns off
+  if(__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_7) != RESET)
+  {
+    //1) Clear the interrupt
+    __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_7); 
+
+    //2) Debounce the signal 
+    for (volatile uint32_t i=0; i<50000; i++) {}
+
+    //3) If the the limit switch is still pressed, stop the motor and run it 3000 microsteps
+    if (!HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_6))
+    {
+      L6470_HardStop(L6470_ID(1));
+      L6470_Move(L6470_ID(1), L6470_DIR_FWD_ID, 3000);
+    }
+  } 
 }
 
 /**

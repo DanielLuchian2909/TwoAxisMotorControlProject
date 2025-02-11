@@ -37,6 +37,7 @@
  
 #include "example.h"
 #include "example_usart.h"
+#include "L6470.h"
 
 /**
   * @defgroup   MotionControl
@@ -73,6 +74,9 @@
   #error "Please define "NUCLEO_USE_USART" in "stm32fxxx_x-nucleo-ihm02a1.h"!"
 #endif
 
+/* Function Prototypes */
+void GPIO_LimitSwitch_Init(void);
+
 /**
   * @}
   */ /* End of ExampleTypes */
@@ -106,6 +110,20 @@ int main(void)
 	
 	/*Initialize the motor parameters */
 	Motor_Param_Reg_Init();
+
+  /* Enable the GPIOA, B, C Clock */
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+
+  /* Init the GPIO pins for the limit switching*/
+  GPIO_LimitSwitch_Init();
+
+  /* Configure EXTI Line[9:5] interrupt priority */
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 1, 0);
+
+  /* Enable EXTI Line[9:5] interrupt */
+  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
   
   /* Infinite loop */
   while (1)
@@ -135,6 +153,46 @@ void assert_failed(uint8_t* file, uint32_t line)
 }
 
 #endif
+
+/**
+ * @brief Initiliaze the interrupt lines for the limit switches
+ * @param None
+ * @retval None 
+ */
+void GPIO_LimitSwitch_Init(void)
+{  
+  /* Configure limit switch positive x-axis (M0) GPIO using pin PA8 */
+  GPIO_InitTypeDef GPIO_InitStruct_PA8;
+  GPIO_InitStruct_PA8.Pin = GPIO_PIN_8; 
+  GPIO_InitStruct_PA8.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct_PA8.Pull = GPIO_PULLDOWN;
+  GPIO_InitStruct_PA8.Speed = GPIO_SPEED_HIGH;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct_PA8);
+
+  /* Configure limit switch negative x-axis (M0) GPIO using pin PA9 */
+  GPIO_InitTypeDef GPIO_InitStruct_PA9;
+  GPIO_InitStruct_PA9.Pin = GPIO_PIN_9; 
+  GPIO_InitStruct_PA9.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct_PA9.Pull = GPIO_PULLDOWN;
+  GPIO_InitStruct_PA9.Speed = GPIO_SPEED_HIGH;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct_PA9);
+
+  /* Configure limit switch positive y-axis (M1) GPIO using pin PB6 */
+  GPIO_InitTypeDef GPIO_InitStruct_PB6;
+  GPIO_InitStruct_PB6.Pin = GPIO_PIN_6; 
+  GPIO_InitStruct_PB6.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct_PB6.Pull = GPIO_PULLDOWN;
+  GPIO_InitStruct_PB6.Speed = GPIO_SPEED_HIGH;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct_PB6);
+
+  /* Configure limit switch negative x-axis (M1) GPIO using pin PB7 */
+  GPIO_InitTypeDef GPIO_InitStruct_PC7;
+  GPIO_InitStruct_PC7.Pin = GPIO_PIN_7; 
+  GPIO_InitStruct_PC7.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct_PC7.Pull = GPIO_PULLDOWN;
+  GPIO_InitStruct_PC7.Speed = GPIO_SPEED_HIGH;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct_PC7);
+}
 
 /**
   * @}
