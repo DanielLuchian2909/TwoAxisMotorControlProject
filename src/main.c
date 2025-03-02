@@ -75,7 +75,8 @@
 #endif
 
 /* Function Prototypes */
-void GPIO_LimitSwitch_Init(void);
+static void GPIO_LimitSwitch_Init(void);
+static uint8_t LimitSwitch_Test(uint8_t L6470_Id);
 
 /**
   * @}
@@ -124,6 +125,19 @@ int main(void)
 
   /* Enable EXTI Line[9:5] interrupt */
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+
+  /* Test Limit Switches */
+  if (!LimitSwitch_Test(0))
+  {
+    USART_Transmit(&huart2, "Limit Switch Test Motor 0 Failed\n\r");
+    return 0;
+  }
+
+  if (!LimitSwitch_Test(1))
+  {
+    USART_Transmit(&huart2, "Limit Switch Test Motor 1 Failed\n\r");
+    return 0;
+  }
   
   /* Infinite loop */
   while (1)
@@ -159,7 +173,7 @@ void assert_failed(uint8_t* file, uint32_t line)
  * @param None
  * @retval None 
  */
-void GPIO_LimitSwitch_Init(void)
+static void GPIO_LimitSwitch_Init(void)
 {  
   /* Configure limit switch positive x-axis (M0) GPIO using pin PA8 */
   GPIO_InitTypeDef GPIO_InitStruct_PA8;
@@ -192,6 +206,29 @@ void GPIO_LimitSwitch_Init(void)
   GPIO_InitStruct_PC7.Pull = GPIO_PULLDOWN;
   GPIO_InitStruct_PC7.Speed = GPIO_SPEED_HIGH;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct_PC7);
+}
+
+/**
+ * @brief Testing Limit Switch Function
+ * @return //1 for successful, it would be stuck for unsuccessful (some sort of timeout then return 0?)
+ * @param //Which motor to test
+ */
+uint8_t LimitSwitch_Test(uint8_t L6470_Id)
+{
+  //Run the motor forward
+  L6470_Run(L6470_Id, L6470_DIR_FWD_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
+
+  //Tight poll until motor starts reverse direction (after limit switch is hit)
+  while (L6470_CheckStatusRegisterFlag(L6470_Id, DIR_ID)){}
+
+  //Run the motor backwards
+  L6470_Run(L6470_Id, L6470_DIR_REV_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
+
+  //Tight poll until the motor starts going in the forward direction (after limit switch is hit)
+  while (!L6470_CheckStatusRegisterFlag(L6470_Id, DIR_ID)){}
+
+  //If it reached here limit switches successfully ran
+  return 1;
 }
 
 /**

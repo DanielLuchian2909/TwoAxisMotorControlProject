@@ -37,6 +37,9 @@
 #include "example_usart.h"
 #include "L6470.h"
 
+/* Defines ------------------------------------------------------------------*/
+#define DEBOUNCE_TIME_ITERATIONS 50000
+
 /**
   * @addtogroup MicrosteppingMotor_Example
   * @{
@@ -101,13 +104,13 @@ void EXTI9_5_IRQHandler(void)
     __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_8); 
 
     //2) Debounce the signal
-    for (volatile uint32_t i=0; i<50000; i++) {}
+    for (volatile uint32_t i=0; i<DEBOUNCE_TIME_ITERATIONS; i++) {}
 
     //3) If the the limit switch is still pressed, stop the motor and reverse it 3000 microsteps
     if (!HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8))
     {
-      L6470_HardStop(L6470_ID(0));
-      L6470_Move(L6470_ID(0), L6470_DIR_REV_ID, 3000);
+      L6470_HardStop(0);
+      L6470_Move(0, L6470_DIR_REV_ID, LIMITSWITCH_STEPS);
     }
   }
 
@@ -119,13 +122,13 @@ void EXTI9_5_IRQHandler(void)
     __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_9); 
 
     //2) Debounce the signal
-    for (volatile uint32_t i=0; i<50000; i++) {}
+    for (volatile uint32_t i=0; i<DEBOUNCE_TIME_ITERATIONS; i++) {}
 
     //3) If the the limit switch is still pressed, stop the motor and run it 3000 microsteps
     if (!HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_9))
     {
-      L6470_HardStop(L6470_ID(0));
-      L6470_Move(L6470_ID(0), L6470_DIR_FWD_ID, 3000);
+      L6470_HardStop(0);
+      L6470_Move(0, L6470_DIR_FWD_ID, LIMITSWITCH_STEPS);
     }
   }
 
@@ -137,13 +140,13 @@ void EXTI9_5_IRQHandler(void)
     __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_6); 
 
     //2) Debounce the signal
-    for (volatile uint32_t i=0; i<50000; i++) {}
+    for (volatile uint32_t i=0; i<DEBOUNCE_TIME_ITERATIONS; i++) {}
 
     //3) If the the limit switch is still pressed, stop the motor and reverse it 3000 microsteps
     if (!HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_6))
     {
-      L6470_HardStop(L6470_ID(1));
-      L6470_Move(L6470_ID(1), L6470_DIR_REV_ID, 3000);
+      L6470_HardStop(1);
+      L6470_Move(1, L6470_DIR_REV_ID, LIMITSWITCH_STEPS);
     }
   }
 
@@ -155,13 +158,13 @@ void EXTI9_5_IRQHandler(void)
     __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_7); 
 
     //2) Debounce the signal 
-    for (volatile uint32_t i=0; i<50000; i++) {}
+    for (volatile uint32_t i=0; i<DEBOUNCE_TIME_ITERATIONS; i++) {}
 
     //3) If the the limit switch is still pressed, stop the motor and run it 3000 microsteps
     if (!HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_6))
     {
-      L6470_HardStop(L6470_ID(1));
-      L6470_Move(L6470_ID(1), L6470_DIR_FWD_ID, 3000);
+      L6470_HardStop(1);
+      L6470_Move(1, L6470_DIR_FWD_ID, LIMITSWITCH_STEPS);
     }
   } 
 }

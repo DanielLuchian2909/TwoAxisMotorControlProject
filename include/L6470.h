@@ -187,8 +187,13 @@ extern "C"
 #define L6470_MAX_DEC_VALUE ((float)59590)   //!< max value for the acceleration in step/s^2
 #define L6470_MAX_DEC_VALUE ((float)59590)   //!< max value for the acceleration in step/s^2
 
+#define L6470_SLOW_SPEED   (L6470_MAX_SPEED_VALUE / 3)      //!< 1/3 of max speed
+#define L6470_MED_SPEED    (L6470_MAX_SPEED_VALUE / 2)      //!< 1/2 of max speed
+#define L6470_FAST_SPEED   (L6470_MAX_SPEED_VALUE  * 2 / 3) //!< 2/3 of max speed
+
 #define OCD_TH_STEP ((float)375)     //!< Minimum step for OCD_TH register in mAmpere
 #define STALL_TH_STEP ((float)31.25) //!< Minimum step for STALL_TH register in mAmpere
+#define LIMITSWITCH_STEPS 3000       //!< Number of steps moved in the other direction after limit switch is hit
 
 #define L6470_ACC_CONV ((float)0.068719)      //!< Conversion factor for acceleration value from step/s^2 to the right value
 #define L6470_DEC_CONV ((float)0.068719)      //!< Conversion factor for deceleration value from step/s^2 to the right value
