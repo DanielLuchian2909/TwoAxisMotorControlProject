@@ -81,7 +81,7 @@ SPI_HandleTypeDef hspi2;
 
 void SystemClock_Config(void);
 void MX_GPIO_Init(void);
-void MX_ADC1_Init(void);
+
 void MX_SPI_Init(void);
 void MX_SPI1_Init(void);
 void MX_SPI2_Init(void);
@@ -414,12 +414,12 @@ void MX_ADC1_Init(void)
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
   hadc1.Init.NbrOfConversion = 1;
   hadc1.Init.DMAContinuousRequests = DISABLE;
-  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc1.Init.EOCSelection = ADC_EOC_SEQ_CONV;
   HAL_ADC_Init(&hadc1);
 
   /**Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
    */
-  sConfig.Channel = ADC_CHANNEL_8;
+  sConfig.Channel = ADC_CHANNEL_4;
   sConfig.Rank = 1;
   sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
   HAL_ADC_ConfigChannel(&hadc1, &sConfig);

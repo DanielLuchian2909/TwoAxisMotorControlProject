@@ -38,6 +38,7 @@
 #include "example_usart.h"
 #include "L6470.h"
 
+
 /**
  * @defgroup   MotionControl
  * @{
@@ -74,12 +75,23 @@
 #error "Please define "NUCLEO_USE_USART" in "stm32fxxx_x-nucleo-ihm02a1.h"!"
 #endif
 
-uint16_t adc_offset = 0; // Global variable to store offset correction
+uint32_t adc_offset = 0; // Global variable to store offset correction
 float adc_gain = 1.0;
 
 /* Function Prototypes */
 static void GPIO_LimitSwitch_Init(void);
-static uint8_t LimitSwitch_Test(uint8_t L6470_Id);
+void ADC_Calculate_Offset();
+void ADC_Calculate_Gain(float input_voltage);
+
+volatile uint8_t PA8IT = 0;
+volatile uint8_t PA9IT = 0;
+volatile int PA8V;
+volatile int PA9V;
+
+volatile uint8_t PB6IT = 0;
+volatile uint8_t PC7IT = 0;
+volatile int PB6V;
+volatile int PC7V;
 /**
  * @}
  */
@@ -130,31 +142,40 @@ int main(void)
   /* Enable EXTI Line[9:5] interrupt */
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
-  /* Test Limit Switches */
-  if (!LimitSwitch_Test(0))
-  {
-    USART_Transmit(&huart2, "Limit Switch Test Motor 0 Failed\n\r");
-    return 0;
-  }
-
-  if (!LimitSwitch_Test(1))
-  {
-    USART_Transmit(&huart2, "Limit Switch Test Motor 1 Failed\n\r");
-    return 0;
-  }
-
-  ADC_Calculate_Gain(0.5);
+  MX_ADC1_Init();
+  
+  ADC_Calculate_Offset();
+  ADC_Calculate_Gain(0);
   // Wait for us to check value
 
+  //ADC_Calculate_Offset();
+  ADC_Calculate_Gain(0.55);
+  // Wait for us to check value
+
+  //ADC_Calculate_Offset();
+  ADC_Calculate_Gain(1.1);
+  // Wait for us to check value
+
+  //ADC_Calculate_Offset();
   ADC_Calculate_Gain(1.65);
   // Wait for us to check value
 
-  ADC_Calculate_Gain(3.0);
+  //ADC_Calculate_Offset();
+  ADC_Calculate_Gain(2.2);
+  // Wait for us to check value
+
+  //ADC_Calculate_Offset();
+  ADC_Calculate_Gain(2.75);
+  // Wait for us to check value
+
+  //ADC_Calculate_Offset();
+  ADC_Calculate_Gain(3.2);
   // Wait for us to check value
 
   /* Infinite loop */
   while (1)
   {
+    
     /* Check if any Application Command for L6470 has been entered by USART */
     USART_CheckAppCmd();
   }
@@ -186,65 +207,38 @@ void assert_failed(uint8_t *file, uint32_t line)
  * @retval None
  */
 static void GPIO_LimitSwitch_Init(void)
-{
+{  
   /* Configure limit switch positive x-axis (M0) GPIO using pin PA8 */
-  GPIO_InitTypeDef GPIO_InitStruct_PA8;
-  GPIO_InitStruct_PA8.Pin = GPIO_PIN_8;
-  GPIO_InitStruct_PA8.Mode = GPIO_MODE_IT_FALLING;
-  GPIO_InitStruct_PA8.Pull = GPIO_PULLDOWN;
-  GPIO_InitStruct_PA8.Speed = GPIO_SPEED_HIGH;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct_PA8);
+  GPIO_InitTypeDef GPIO_InitStruct_LimitSwitch_XPos;
+  GPIO_InitStruct_LimitSwitch_XPos.Pin = LIMIT_SWITCH_XPOS_PIN; 
+  GPIO_InitStruct_LimitSwitch_XPos.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct_LimitSwitch_XPos.Pull = GPIO_PULLUP;
+  GPIO_InitStruct_LimitSwitch_XPos.Speed = GPIO_SPEED_FAST;
+  HAL_GPIO_Init(LIMIT_SWITCH_XPOS_PORT, &GPIO_InitStruct_LimitSwitch_XPos);
 
   /* Configure limit switch negative x-axis (M0) GPIO using pin PA9 */
-  GPIO_InitTypeDef GPIO_InitStruct_PA9;
-  GPIO_InitStruct_PA9.Pin = GPIO_PIN_9;
-  GPIO_InitStruct_PA9.Mode = GPIO_MODE_IT_FALLING;
-  GPIO_InitStruct_PA9.Pull = GPIO_PULLDOWN;
-  GPIO_InitStruct_PA9.Speed = GPIO_SPEED_HIGH;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct_PA9);
+  GPIO_InitTypeDef GPIO_InitStruct_LimitSwitch_XNeg;
+  GPIO_InitStruct_LimitSwitch_XNeg.Pin = LIMIT_SWITCH_XNEG_PIN; 
+  GPIO_InitStruct_LimitSwitch_XNeg.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct_LimitSwitch_XNeg.Pull = GPIO_PULLUP;
+  GPIO_InitStruct_LimitSwitch_XNeg.Speed = GPIO_SPEED_FAST;
+  HAL_GPIO_Init(LIMIT_SWITCH_XNEG_PORT, &GPIO_InitStruct_LimitSwitch_XNeg);
 
   /* Configure limit switch positive y-axis (M1) GPIO using pin PB6 */
-  GPIO_InitTypeDef GPIO_InitStruct_PB6;
-  GPIO_InitStruct_PB6.Pin = GPIO_PIN_6;
-  GPIO_InitStruct_PB6.Mode = GPIO_MODE_IT_FALLING;
-  GPIO_InitStruct_PB6.Pull = GPIO_PULLDOWN;
-  GPIO_InitStruct_PB6.Speed = GPIO_SPEED_HIGH;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct_PB6);
+  GPIO_InitTypeDef GPIO_InitStruct_LimitSwitch_YPos;
+  GPIO_InitStruct_LimitSwitch_YPos.Pin = LIMIT_SWITCH_YPOS_PIN; 
+  GPIO_InitStruct_LimitSwitch_YPos.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct_LimitSwitch_YPos.Pull = GPIO_PULLUP;
+  GPIO_InitStruct_LimitSwitch_YPos.Speed = GPIO_SPEED_FAST;
+  HAL_GPIO_Init(LIMIT_SWITCH_YPOS_PORT, &GPIO_InitStruct_LimitSwitch_YPos);
 
   /* Configure limit switch negative x-axis (M1) GPIO using pin PB7 */
-  GPIO_InitTypeDef GPIO_InitStruct_PC7;
-  GPIO_InitStruct_PC7.Pin = GPIO_PIN_7;
-  GPIO_InitStruct_PC7.Mode = GPIO_MODE_IT_FALLING;
-  GPIO_InitStruct_PC7.Pull = GPIO_PULLDOWN;
-  GPIO_InitStruct_PC7.Speed = GPIO_SPEED_HIGH;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct_PC7);
-}
-
-/**
- * @brief Testing Limit Switch Function
- * @return //1 for successful, it would be stuck for unsuccessful (some sort of timeout then return 0?)
- * @param //Which motor to test
- */
-uint8_t LimitSwitch_Test(uint8_t L6470_Id)
-{
-  // Run the motor forward
-  L6470_Run(L6470_Id, L6470_DIR_FWD_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
-
-  // Tight poll until motor starts reverse direction (after limit switch is hit)
-  while (L6470_CheckStatusRegisterFlag(L6470_Id, DIR_ID))
-  {
-  }
-
-  // Run the motor backwards
-  L6470_Run(L6470_Id, L6470_DIR_REV_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
-
-  // Tight poll until the motor starts going in the forward direction (after limit switch is hit)
-  while (!L6470_CheckStatusRegisterFlag(L6470_Id, DIR_ID))
-  {
-  }
-
-  // If it reached here limit switches successfully ran
-  return 1;
+  GPIO_InitTypeDef GPIO_InitStruct_LimitSwitch_YNeg;
+  GPIO_InitStruct_LimitSwitch_YNeg.Pin = LIMIT_SWITCH_YNEG_PIN; 
+  GPIO_InitStruct_LimitSwitch_YNeg.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct_LimitSwitch_YNeg.Pull = GPIO_PULLUP;
+  GPIO_InitStruct_LimitSwitch_YNeg.Speed = GPIO_SPEED_FAST;
+  HAL_GPIO_Init(LIMIT_SWITCH_YNEG_PORT, &GPIO_InitStruct_LimitSwitch_YNeg);
 }
 
 void ADC_Calculate_Offset()
@@ -266,7 +260,7 @@ void ADC_Calculate_Gain(float input_voltage)
   HAL_ADC_Start(&hadc1);
   HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
   uint32_t raw_adc = HAL_ADC_GetValue(&hadc1);
-  uint32_t offset_corrected_value = raw_adc + adc_offset;
+  uint32_t offset_corrected_value = raw_adc - adc_offset;
 
   float measured_voltage = (offset_corrected_value / 1023.0f) * 3.3f;
   adc_gain = input_voltage / measured_voltage;

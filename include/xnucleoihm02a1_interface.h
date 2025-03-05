@@ -199,6 +199,7 @@ extern sL6470_GPIO L6470_nCS_GPIO_Array[];
 
 void NUCLEO_Board_Init(void);
 void User_LED_Blinking(uint8_t repetitions, uint16_t period_ms);
+void MX_ADC1_Init(void);
 
 /**
   * @}
