@@ -126,6 +126,32 @@ extern "C"
    */
   /* End of L6470_Exported_Types */
 
+    /**
+   * @defgroup   Limit Switch Pins
+   * @brief      The corresponding pins and ports for the limit switches
+   * @{
+   */
+
+#define LIMIT_SWITCH_XPOS_PORT GPIOA
+#define LIMIT_SWITCH_XPOS_PIN GPIO_PIN_8
+
+#define LIMIT_SWITCH_XNEG_PORT GPIOA
+#define LIMIT_SWITCH_XNEG_PIN GPIO_PIN_9
+
+#define LIMIT_SWITCH_YPOS_PORT GPIOB
+#define LIMIT_SWITCH_YPOS_PIN GPIO_PIN_6
+
+#define LIMIT_SWITCH_YNEG_PORT GPIOC
+#define LIMIT_SWITCH_YNEG_PIN GPIO_PIN_7
+
+#define MOTOR_X 0
+#define MOTOR_Y 1
+   
+    /**
+   * @}
+   */
+  /* End of Limit Switch Pins */
+
   /**
    * @defgroup   L6470_Exported_Macros
    * @brief      L6470 Exported Macros.
@@ -187,9 +213,9 @@ extern "C"
 #define L6470_MAX_DEC_VALUE ((float)59590)   //!< max value for the acceleration in step/s^2
 #define L6470_MAX_DEC_VALUE ((float)59590)   //!< max value for the acceleration in step/s^2
 
-#define L6470_SLOW_SPEED   (L6470_MAX_SPEED_VALUE / 3)      //!< 1/3 of max speed
-#define L6470_MED_SPEED    (L6470_MAX_SPEED_VALUE / 2)      //!< 1/2 of max speed
-#define L6470_FAST_SPEED   (L6470_MAX_SPEED_VALUE  * 2 / 3) //!< 2/3 of max speed
+#define L6470_SLOW_SPEED   (L6470_MAX_SPEED_VALUE / 20 / 3)      //!< 1/3 of max speed
+#define L6470_MED_SPEED    (L6470_MAX_SPEED_VALUE / 20 / 2)      //!< 1/2 of max speed
+#define L6470_FAST_SPEED   (L6470_MAX_SPEED_VALUE / 20  * 2 / 3) //!< 2/3 of max speed
 
 #define OCD_TH_STEP ((float)375)     //!< Minimum step for OCD_TH register in mAmpere
 #define STALL_TH_STEP ((float)31.25) //!< Minimum step for STALL_TH register in mAmpere
@@ -200,11 +226,14 @@ extern "C"
 #define L6470_MAXSPEED_CONV ((float)0.065536) //!< Conversion factor for max speed value from step/s to the right value
 #define L6470_MINSPEED_CONV ((float)4.194304) //!< Conversion factor for min speed value from step/s to the right value
 #define L6470_SPEED_CONV ((float)67.108864)   //!< Conversion factor for speed value from step/s to the right value
-
-  extern const sL6470_Register_t L6470_Register[];
-  extern const sL6470_ApplicationCommand_t L6470_ApplicationCommand[];
-  extern const sL6470_Direction_t L6470_Direction[];
-  extern const sL6470_ACT_t L6470_ACT[];
+  
+extern const sL6470_Register_t L6470_Register[];
+  
+extern const sL6470_ApplicationCommand_t L6470_ApplicationCommand[];
+  
+extern const sL6470_Direction_t L6470_Direction[];
+  
+extern const sL6470_ACT_t L6470_ACT[];
 
   /**
    * @}

@@ -63,6 +63,11 @@
   * @{
   */
 
+extern volatile uint8_t PA8IT;
+extern volatile uint8_t PA9IT;
+extern volatile uint8_t PB6IT;
+extern volatile uint8_t PC7IT;
+
 /**
   * @brief The L6470 Registers Identifiers.
   */
