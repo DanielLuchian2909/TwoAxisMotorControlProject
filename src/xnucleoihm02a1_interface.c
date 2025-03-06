@@ -400,7 +400,8 @@ void MX_ADC1_Init(void)
   ADC_ChannelConfTypeDef sConfig;
 
   /* GPIO Ports Clock Enable */
-  __GPIOB_CLK_ENABLE();
+  // __GPIOA_CLK_ENABLE();
+  __HAL_RCC_ADC1_CLK_ENABLE();
 
   /**Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
    */
@@ -411,6 +412,7 @@ void MX_ADC1_Init(void)
   hadc1.Init.ContinuousConvMode = ENABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
   hadc1.Init.NbrOfConversion = 1;
   hadc1.Init.DMAContinuousRequests = DISABLE;
