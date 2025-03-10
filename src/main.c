@@ -75,13 +75,17 @@
 #endif
 
 volatile uint32_t adc_offset = 0; // Global variable to store offset correction
-volatile adc_gain = 1.0;
+volatile float adc_gain = 1.0;
 
 /* Function Prototypes */
 static void GPIO_LimitSwitch_Init(void);
 void ADC_Calculate_Offset();
 void ADC_Calculate_Gain(float input_voltage);
+void ADC_Calibrated_Read();
+void GPIO_ADC_Init();
 
+volatile uint16_t Channel_0_Value;
+volatile uint16_t Channel_1_Value;
 volatile uint8_t PA8IT = 0;
 volatile uint8_t PA9IT = 0;
 volatile int PA8V;
@@ -127,9 +131,8 @@ int main(void)
   /*Initialize the motor parameters */
   Motor_Param_Reg_Init();
 
-  /* Enable the GPIOA, B, C Clo
-
-
+  /* Enable the GPIOA, B, C Clock*/
+  __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
 
@@ -143,41 +146,45 @@ int main(void)
   /* Enable EXTI Line[9:5] interrupt */
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
-  volatile GPIO_PinState test = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1);
+  // volatile GPIO_PinState test = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4);
 
   MX_ADC1_Init();
 
-  ADC_Calculate_Offset();
-  ADC_Calculate_Gain(3.3);
+  // ADC_Calculate_Offset();
+  // ADC_Calculate_Gain(3.3);
   // Wait for us to check value
 
-  // ADC_Calculate_Offset();
-  ADC_Calculate_Gain(0.55);
-  // Wait for us to check value
+  // // ADC_Calculate_Offset();
+  // ADC_Calculate_Gain(0.55);
+  // // Wait for us to check value
 
-  // ADC_Calculate_Offset();
-  ADC_Calculate_Gain(1.1);
-  // Wait for us to check value
+  // // ADC_Calculate_Offset();
+  // ADC_Calculate_Gain(1.1);
+  // // Wait for us to check value
 
-  // ADC_Calculate_Offset();
-  ADC_Calculate_Gain(1.65);
-  // Wait for us to check value
+  // // ADC_Calculate_Offset();
+  // ADC_Calculate_Gain(1.65);
+  // // Wait for us to check value
 
-  // ADC_Calculate_Offset();
-  ADC_Calculate_Gain(2.2);
-  // Wait for us to check value
+  // // ADC_Calculate_Offset();
+  // ADC_Calculate_Gain(2.2);
+  // // Wait for us to check value
 
-  // ADC_Calculate_Offset();
-  ADC_Calculate_Gain(2.75);
-  // Wait for us to check value
+  // // ADC_Calculate_Offset();
+  // ADC_Calculate_Gain(2.75);
+  // // Wait for us to check value
 
-  // ADC_Calculate_Offset();
-  ADC_Calculate_Gain(3.2);
+  // // ADC_Calculate_Offset();
+  // ADC_Calculate_Gain(3.2);
   // Wait for us to check value
 
   /* Infinite loop */
   while (1)
   {
+    ADC_Calibrated_Read();
+    char buffer[50]; // Buffer for formatted string
+    sprintf(buffer, "Channel 0: %u Channel 1: %u\r\n", Channel_0_Value, Channel_1_Value);
+    USART_Transmit(&huart2, (uint8_t*)buffer);
 
     /* Check if any Application Command for L6470 has been entered by USART */
     USART_CheckAppCmd();
@@ -246,12 +253,19 @@ static void GPIO_LimitSwitch_Init(void)
 
 void GPIO_ADC_Init(void)
 {
-  /* Configure Pin for ADC*/
-  GPIO_InitTypeDef GPIO_InitStruct_ADC;
-  GPIO_InitStruct_ADC.Pin = GPIO_PIN_4;
-  GPIO_InitStruct_ADC.Mode = GPIO_MODE_ANALOG;
-  GPIO_InitStruct_ADC.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct_ADC);
+  /* Configure First Pin for ADC*/
+  GPIO_InitTypeDef GPIO_InitStruct_ADC_1;
+  GPIO_InitStruct_ADC_1.Pin = GPIO_PIN_4;
+  GPIO_InitStruct_ADC_1.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct_ADC_1.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct_ADC_1);
+
+  /* Configure Second Pin for ADC*/
+  GPIO_InitTypeDef GPIO_InitStruct_ADC_2;
+  GPIO_InitStruct_ADC_2.Pin = GPIO_PIN_1;
+  GPIO_InitStruct_ADC_2.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct_ADC_2.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct_ADC_2);
 }
 
 void ADC_Calculate_Offset()
@@ -277,6 +291,37 @@ void ADC_Calculate_Gain(float input_voltage)
 
   volatile float measured_voltage = (offset_corrected_value / 1023.0f) * 3.3f;
   adc_gain = input_voltage / measured_voltage;
+}
+
+void ADC_Calibrated_Read()
+{
+
+  // Using 2 since we are configuring 2 ADC channels
+  uint32_t adc_values[2];
+  HAL_ADC_Start(&hadc1);
+
+  for (int i = 0; i < 2; i++)
+  {
+    HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+    adc_values[i] = HAL_ADC_GetValue(&hadc1);
+  }
+
+  for (int i = 0; i < 2; i++)
+  {
+    volatile float offset_corrected_value = (float)adc_values[i] - adc_offset;
+    volatile float offset_corrected_voltage = (offset_corrected_value / 1023.0f) * 3.3f;
+    volatile float corrected_voltage = offset_corrected_voltage * adc_gain;
+    volatile uint16_t reading = (uint16_t)((corrected_voltage / 3.3f) * 1023);
+    if (i == 0)
+    {
+      Channel_0_Value = reading;
+    }
+    else
+    {
+      Channel_1_Value = reading;
+    }
+  }
+  // HAL_ADC_Stop(&hadc1);
 }
 
 /**
