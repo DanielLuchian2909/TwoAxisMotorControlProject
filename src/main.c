@@ -143,8 +143,6 @@ int main(void)
   /* Enable EXTI Line[9:5] interrupt */
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
-  volatile GPIO_PinState test = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4);
-
   MX_ADC1_Init();
 
   // ADC_Calculate_Offset();
