@@ -37,6 +37,7 @@
 #include "example.h"
 #include "example_usart.h"
 #include "L6470.h"
+#include "stdio.h"
 
 /**
  * @defgroup   MotionControl
@@ -92,6 +93,12 @@ volatile uint8_t PB6IT = 0;
 volatile uint8_t PC7IT = 0;
 volatile int PB6V;
 volatile int PC7V;
+
+int __io_putchar(int ch)
+{
+  HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
+  return ch;
+}
 /**
  * @}
  */
@@ -148,13 +155,19 @@ int main(void)
   // ADC_Calculate_Offset();
   // ADC_Calculate_Gain(3.3);
   // Wait for us to check value
-
+  char buffer[50];
   /* Infinite loop */
   while (1)
   {
     volatile uint16_t value = ADC_Calibrated_Read();
     /* Check if any Application Command for L6470 has been entered by USART */
-    USART_CheckAppCmd();
+    // USART_CheckAppCmd();
+
+    // printf("Hi\n");
+    HAL_Delay(1000);
+
+    sprintf(buffer, "%d\r\n", value);
+    USART_Transmit(&huart2, buffer);
   }
 #endif
 }
@@ -216,6 +229,14 @@ static void GPIO_LimitSwitch_Init(void)
   GPIO_InitStruct_LimitSwitch_YNeg.Pull = GPIO_PULLUP;
   GPIO_InitStruct_LimitSwitch_YNeg.Speed = GPIO_SPEED_FAST;
   HAL_GPIO_Init(LIMIT_SWITCH_YNEG_PORT, &GPIO_InitStruct_LimitSwitch_YNeg);
+
+  /* Configure switch for axis with GPIO using pin ___ */
+  GPIO_InitTypeDef GPIO_InitStruct_Button_Axis;
+  GPIO_InitStruct_Button_Axis.Pin = LIMIT_SWITCH_YNEG_PIN;
+  GPIO_InitStruct_Button_Axis.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct_Button_Axis.Pull = GPIO_PULLUP;
+  GPIO_InitStruct_Button_Axis.Speed = GPIO_SPEED_FAST;
+  HAL_GPIO_Init(LIMIT_SWITCH_YNEG_PORT, &GPIO_InitStruct_Button_Axis);
 }
 
 void GPIO_ADC_Init(void)
