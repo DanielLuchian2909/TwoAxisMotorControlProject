@@ -75,30 +75,37 @@
 #error "Please define "NUCLEO_USE_USART" in "stm32fxxx_x-nucleo-ihm02a1.h"!"
 #endif
 
-volatile uint32_t adc_offset = 0; // Global variable to store offset correction
-volatile adc_gain = 1.0;
+/* Macros and Defines */
+#define ADC1_RESOLUTION_BITS 1023
 
-/* Function Prototypes */
-static void GPIO_LimitSwitch_Init(void);
-void ADC_Calculate_Offset();
-void ADC_Calculate_Gain(float input_voltage);
+#define FAST_FWD_THRESHOLD_ADC       ADC1_RESOLUTION_BITS / 5
+#define SLOW_FWD_THRESHOLD_ADC       ADC1_RESOLUTION_BITS / 5 * 2
+#define STOP_THRESHOLD_ADC           ADC1_RESOLUTION_BITS / 5 * 3
+#define SLOW_REV_THRESHOLD_ADC       ADC1_RESOLUTION_BITS / 5 * 4
+
+//#define ENABLE_ADC_CALIBRATION //Comment to disable calibration
+
+/* Global Variables */
+//ADC Global Variables 
+uint32_t adc_offset = 0;
+double adc_gain = 1.0;
+
+//Motor Running Variable
+volatile eL6470_MotorRuning_t g_curr_motor;
+
+/* Static Variables */
+
+/* Global Function Prototypes */
 uint16_t ADC_Calibrated_Read();
+int __io_putchar(int ch);
 
-volatile uint8_t PA8IT = 0;
-volatile uint8_t PA9IT = 0;
-volatile int PA8V;
-volatile int PA9V;
+/* Static Function Prototypes */
+static void GPIO_LimitSwitch_Init(void);
+static void GPIO_ADC_Init(void);
+static void GPIO_AxisSwitch_Init(void);
+static void ADC_Calculate_Offset();
+static void ADC_Calculate_Gain(float input_voltage);
 
-volatile uint8_t PB6IT = 0;
-volatile uint8_t PC7IT = 0;
-volatile int PB6V;
-volatile int PC7V;
-
-int __io_putchar(int ch)
-{
-  HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
-  return ch;
-}
 /**
  * @}
  */
@@ -140,34 +147,78 @@ int main(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
 
-  /* Init the GPIO pins for the limit switching*/
+  /* Init the GPIO pins for the limit switch */
   GPIO_LimitSwitch_Init();
+
+  /* Init the GPIO pin for motor switching */
+  GPIO_AxisSwitch_Init();
+
+  /* Init the GPIO pin for the ADC */
   GPIO_ADC_Init();
 
-  /* Configure EXTI Line[9:5] interrupt priority */
+  /* Configure EXTI Line[9:5] and Line[4] interrupt priority */
+  HAL_NVIC_SetPriority(EXTI4_IRQn, 2, 0);
   HAL_NVIC_SetPriority(EXTI9_5_IRQn, 1, 0);
 
-  /* Enable EXTI Line[9:5] interrupt */
+  /* Enable EXTI Line[9:5] and Line[4] interrupt */
+  HAL_NVIC_EnableIRQ(EXTI4_IRQn);
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
+  /* Intialize, Calibrate and Start ADC1 */
   MX_ADC1_Init();
+  HAL_ADC_Start(&hadc1);
+  #ifdef ENABLE_ADC_CALIBRATION
+    ADC_Calculate_Offset();
+    ADC_Calculate_Gain(3.3);
+  #endif
 
-  // ADC_Calculate_Offset();
-  // ADC_Calculate_Gain(3.3);
-  // Wait for us to check value
-  char buffer[50];
+  /* Initialize the motor control to start with Motor0*/
+  //g_curr_motor = L6470_MOTOR0;
+
+  /* Create variable to store and print ADC values*/
+  char adc_buffer[20];
+  uint16_t adc_value;
+
+  L6470_Run(MOTOR_X, L6470_DIR_FWD_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
+
   /* Infinite loop */
   while (1)
   {
-    volatile uint16_t value = ADC_Calibrated_Read();
     /* Check if any Application Command for L6470 has been entered by USART */
     // USART_CheckAppCmd();
 
-    // printf("Hi\n");
-    HAL_Delay(1000);
+    //sprintf(adc_buffer, "%d\r\n", adc_value);
+    //USART_Transmit(&huart2, adc_buffer);
+    //HAL_Delay(100);
+    
+    //Read the current ADC Value
+    adc_value = ADC_Calibrated_Read();
 
-    sprintf(buffer, "%d\r\n", value);
-    USART_Transmit(&huart2, buffer);
+    //If the ADC reading is between 0 and the FWD  drive FWD and fast
+    if (adc_value < FAST_FWD_THRESHOLD_ADC)
+    {
+      L6470_Run(g_curr_motor, L6470_DIR_FWD_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
+    }
+    //If the ADC reading is between A and B bits drive FWD and slowly
+    else if (adc_value < SLOW_FWD_THRESHOLD_ADC)
+    {
+      L6470_Run(g_curr_motor, L6470_DIR_FWD_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
+    }
+    //If the ADC reading is between B and C bits, stop
+    else if (adc_value < STOP_THRESHOLD_ADC)
+    {
+      L6470_HardStop(g_curr_motor);
+    }
+    //If the ADC reading is between C and D bits drive REV and slowly
+    else if (adc_value < SLOW_REV_THRESHOLD_ADC)
+    {
+      L6470_Run(g_curr_motor, L6470_DIR_REV_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
+    }
+    //If the ADC reading is greater than the REV fast speed threshold drive REV and slowly
+    else
+    {
+      L6470_Run(g_curr_motor, L6470_DIR_REV_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
+    }
   }
 #endif
 }
@@ -229,17 +280,30 @@ static void GPIO_LimitSwitch_Init(void)
   GPIO_InitStruct_LimitSwitch_YNeg.Pull = GPIO_PULLUP;
   GPIO_InitStruct_LimitSwitch_YNeg.Speed = GPIO_SPEED_FAST;
   HAL_GPIO_Init(LIMIT_SWITCH_YNEG_PORT, &GPIO_InitStruct_LimitSwitch_YNeg);
-
-  /* Configure switch for axis with GPIO using pin ___ */
-  GPIO_InitTypeDef GPIO_InitStruct_Button_Axis;
-  GPIO_InitStruct_Button_Axis.Pin = LIMIT_SWITCH_YNEG_PIN;
-  GPIO_InitStruct_Button_Axis.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct_Button_Axis.Pull = GPIO_PULLUP;
-  GPIO_InitStruct_Button_Axis.Speed = GPIO_SPEED_FAST;
-  HAL_GPIO_Init(LIMIT_SWITCH_YNEG_PORT, &GPIO_InitStruct_Button_Axis);
 }
 
-void GPIO_ADC_Init(void)
+/**
+ * @brief Initiliaze the interrupt line for switching axis
+ * @param None
+ * @retval None
+ */
+static void GPIO_AxisSwitch_Init(void)
+{
+  /* Configure the interrupt pin for the motor direction */
+  GPIO_InitTypeDef GPIO_InitStruct_Axis_Switch;
+  GPIO_InitStruct_Axis_Switch.Pin = AXIS_SWITCH_PIN;
+  GPIO_InitStruct_Axis_Switch.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct_Axis_Switch.Pull = GPIO_PULLUP;
+  GPIO_InitStruct_Axis_Switch.Speed = GPIO_SPEED_FAST;
+  HAL_GPIO_Init(AXIS_SWITCH_PORT, &GPIO_InitStruct_Axis_Switch);
+}
+
+/**
+ * @brief Initiliaze the ADC
+ * @param None
+ * @retval None
+ */
+static void GPIO_ADC_Init(void)
 {
   /* Configure Pin for ADC*/
   GPIO_InitTypeDef GPIO_InitStruct_ADC;
@@ -249,40 +313,65 @@ void GPIO_ADC_Init(void)
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct_ADC);
 }
 
-void ADC_Calculate_Offset()
+/**
+ * @brief Calculate ADC offset
+ * @param None
+ * @retval None
+ */
+static void ADC_Calculate_Offset()
 {
-  HAL_ADC_Start(&hadc1);
   uint32_t sum = 0;
+
   // Average 100 readings for better accuracy
   for (int i = 0; i < 100; i++)
   {
     HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
     sum += HAL_ADC_GetValue(&hadc1);
   }
+
   // Store the offset value in global variable
   adc_offset = sum / 100;
 }
 
-void ADC_Calculate_Gain(float input_voltage)
+/**
+ * @brief Calculate ADC gain
+ * @param None
+ * @retval None
+ */
+static void ADC_Calculate_Gain(float input_voltage)
 {
-  HAL_ADC_Start(&hadc1);
   HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-  volatile uint32_t raw_adc = HAL_ADC_GetValue(&hadc1);
-  volatile float offset_corrected_value = (float)raw_adc - adc_offset;
+  uint32_t raw_adc = HAL_ADC_GetValue(&hadc1);
+  float offset_corrected_value = (float)raw_adc - adc_offset;
 
-  volatile float measured_voltage = (offset_corrected_value / 1023.0f) * 3.3f;
+  float measured_voltage = (offset_corrected_value / 1023.0f) * 3.3f;
   adc_gain = input_voltage / measured_voltage;
 }
 
+/**
+ * @brief Read ADC Value
+ * @param None
+ * @retval ADC Value
+ */
 uint16_t ADC_Calibrated_Read()
 {
-  HAL_ADC_Start(&hadc1);
   HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-  volatile uint32_t raw_adc = HAL_ADC_GetValue(&hadc1);
-  volatile float offset_corrected_value = (float)raw_adc - adc_offset;
-  volatile float offset_corrected_voltage = (offset_corrected_value / 1023.0f) * 3.3f;
-  volatile float corrected_voltage = offset_corrected_voltage * adc_gain;
+  uint32_t raw_adc = HAL_ADC_GetValue(&hadc1);
+  float offset_corrected_value = (float)raw_adc - adc_offset;
+  float offset_corrected_voltage = (offset_corrected_value / 1023.0f) * 3.3f;
+  float corrected_voltage = offset_corrected_voltage * adc_gain;
   return (uint16_t)((corrected_voltage / 3.3f) * 1023);
+}
+
+/**
+ * @brief Putchar Function
+ * @param Character to transmit
+ * @retval Transmitted character
+ */
+int __io_putchar(int ch)
+{
+  HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
+  return ch;
 }
 
 /**

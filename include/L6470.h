@@ -144,6 +144,9 @@ extern "C"
 #define LIMIT_SWITCH_YNEG_PORT GPIOC
 #define LIMIT_SWITCH_YNEG_PIN GPIO_PIN_7
 
+#define AXIS_SWITCH_PORT GPIOB
+#define AXIS_SWITCH_PIN GPIO_PIN_4
+
 #define MOTOR_X 0
 #define MOTOR_Y 1
    
@@ -214,8 +217,7 @@ extern "C"
 #define L6470_MAX_DEC_VALUE ((float)59590)   //!< max value for the acceleration in step/s^2
 
 #define L6470_SLOW_SPEED   (L6470_MAX_SPEED_VALUE / 20 / 3)      //!< 1/3 of max speed
-#define L6470_MED_SPEED    (L6470_MAX_SPEED_VALUE / 20 / 2)      //!< 1/2 of max speed
-#define L6470_FAST_SPEED   (L6470_MAX_SPEED_VALUE / 20  * 2 / 3) //!< 2/3 of max speed
+#define L6470_FAST_SPEED    (L6470_MAX_SPEED_VALUE / 20 / 2)      //!< 1/2 of max speed
 
 #define OCD_TH_STEP ((float)375)     //!< Minimum step for OCD_TH register in mAmpere
 #define STALL_TH_STEP ((float)31.25) //!< Minimum step for STALL_TH register in mAmpere
@@ -234,6 +236,8 @@ extern const sL6470_ApplicationCommand_t L6470_ApplicationCommand[];
 extern const sL6470_Direction_t L6470_Direction[];
   
 extern const sL6470_ACT_t L6470_ACT[];
+
+extern volatile eL6470_MotorRuning_t g_curr_motor;
 
   /**
    * @}

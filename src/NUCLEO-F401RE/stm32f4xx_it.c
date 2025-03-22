@@ -52,6 +52,9 @@
 //Y negative limit switch - Returns true if high (pressed), false if low (not pressed)
 #define IsLimitSwitchYNegHigh() (HAL_GPIO_ReadPin(LIMIT_SWITCH_YNEG_PORT, LIMIT_SWITCH_YNEG_PIN) == GPIO_PIN_SET)
 
+//Axis switch - Returns true if high (pressed), false if low (not pressed)
+#define IsAxisSwitchHigh() (HAL_GPIO_ReadPin(AXIS_SWITCH_PORT, AXIS_SWITCH_PIN) == GPIO_PIN_SET)
+
 //Check if MX is moving forward (returns 1) or backward (returns 0) using enum for direction
 #define IsMotorXMovingForward() (L6470_CheckStatusRegisterFlag(MOTOR_X, DIR_ID) == L6470_DIR_FWD_ID)
 
@@ -111,6 +114,29 @@ void EXTI0_IRQHandler(void)
 }
 
 /**
+* @brief This function handles EXTI Line4 interrupt.
+*/
+void EXTI4_IRQHandler(void)
+{
+  if(__HAL_GPIO_EXTI_GET_IT(AXIS_SWITCH_PIN) != RESET)
+  {
+    //1) Clear the interrupt
+    __HAL_GPIO_EXTI_CLEAR_IT(AXIS_SWITCH_PIN); 
+
+    //2) Debounce the signal
+    for (volatile uint32_t j=0; j<DEBOUNCE_TIME_ITERATIONS; j++) 
+    {}
+    
+    //3) If interrupt is still high stop the motor and switch the current motor to the other one
+    if (IsAxisSwitchHigh())
+    {
+      L6470_HardStop(g_curr_motor);
+      g_curr_motor = !g_curr_motor;
+    }
+  } 
+}
+
+/**
  * @brief This function handles EXTI Line[9:5] interrupt.
  */
 void EXTI9_5_IRQHandler(void)
@@ -131,12 +157,10 @@ void EXTI9_5_IRQHandler(void)
     if ( IsLimitSwitchXPosHigh() && (!IsLimitSwitchXNegHigh()) && IsMotorXMovingForward() )
     {
       L6470_Run(MOTOR_X, L6470_DIR_REV_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
-      PA8IT = 1;
     }
-    else if ( IsLimitSwitchXPosHigh() && IsLimitSwitchXNegHigh() )
+    else if (IsLimitSwitchXPosHigh() && IsLimitSwitchXNegHigh())
     {
       L6470_HardStop(MOTOR_X);
-      PA8IT = 2;
     }
   }
 
@@ -158,10 +182,9 @@ void EXTI9_5_IRQHandler(void)
     {
       L6470_Run(MOTOR_X, L6470_DIR_FWD_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
     }
-    else if ( IsLimitSwitchXNegHigh() && !IsLimitSwitchXPosHigh() )
+    else if (IsLimitSwitchXPosHigh() && IsLimitSwitchXNegHigh())
     {
       L6470_HardStop(MOTOR_X);
-      PA9IT = 2;
     }
   }
 
@@ -182,12 +205,10 @@ void EXTI9_5_IRQHandler(void)
     if ( IsLimitSwitchYPosHigh() && (!IsLimitSwitchYNegHigh()) && IsMotorYMovingForward())
     {
       L6470_Run(MOTOR_Y, L6470_DIR_REV_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
-      PB6IT = 1;
     }
     else if ( IsLimitSwitchYPosHigh() && IsLimitSwitchYNegHigh() )
     {
       L6470_HardStop(MOTOR_Y);
-      PB6IT = 2;
     }
   }
 
@@ -208,12 +229,10 @@ void EXTI9_5_IRQHandler(void)
     if ( IsLimitSwitchYNegHigh() && (!IsLimitSwitchYPosHigh()) && (!IsMotorYMovingForward()) )
     {
       L6470_Run(MOTOR_Y, L6470_DIR_FWD_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
-      PC7IT = 1;
     }
-    else if ( IsLimitSwitchYNegHigh() && IsLimitSwitchYPosHigh() )
+    else if (IsLimitSwitchYPosHigh() && IsLimitSwitchYNegHigh())
     {
       L6470_HardStop(MOTOR_Y);
-      PC7IT = 2;
     }
   } 
 }
