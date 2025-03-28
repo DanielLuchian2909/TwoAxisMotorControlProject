@@ -120,13 +120,14 @@ void EXTI4_IRQHandler(void)
 {
   if(__HAL_GPIO_EXTI_GET_IT(AXIS_SWITCH_PIN) != RESET)
   {
-    //1) Clear the interrupt
-    __HAL_GPIO_EXTI_CLEAR_IT(AXIS_SWITCH_PIN); 
 
-    //2) Debounce the signal
+    //1) Debounce the signal
     for (volatile uint32_t j=0; j<DEBOUNCE_TIME_ITERATIONS; j++) 
     {}
-    
+        
+    //2) Clear the interrupt
+    __HAL_GPIO_EXTI_CLEAR_IT(AXIS_SWITCH_PIN); 
+
     //3) If interrupt is still high stop the motor and switch the current motor to the other one
     if (IsAxisSwitchHigh())
     {
@@ -145,12 +146,12 @@ void EXTI9_5_IRQHandler(void)
   //stop the motor and reverse it until the limit switch turns off
   if(__HAL_GPIO_EXTI_GET_IT(LIMIT_SWITCH_XPOS_PIN) != RESET)
   {
-    //1) Clear the interrupt
-    __HAL_GPIO_EXTI_CLEAR_IT(LIMIT_SWITCH_XPOS_PIN); 
-
-    //2) Debounce the signal
+    //1) Debounce the signal
     for (volatile uint32_t i=0; i<DEBOUNCE_TIME_ITERATIONS; i++) 
     {}
+
+    //2) Clear the interrupt
+    __HAL_GPIO_EXTI_CLEAR_IT(LIMIT_SWITCH_XPOS_PIN); 
     
     //3) If the X Pos limit switch is high, motor0 is going fwd, and the X Neg limit switch is low, go backwards
     //   Else If the X Pos limit switch is high and the X Neg limit switch is high, stop
@@ -169,12 +170,12 @@ void EXTI9_5_IRQHandler(void)
   //stop the motor and reverse it until the limit switch turns off
   if(__HAL_GPIO_EXTI_GET_IT(LIMIT_SWITCH_XNEG_PIN) != RESET)
   {
-    //1) Clear the interrupt
-    __HAL_GPIO_EXTI_CLEAR_IT(LIMIT_SWITCH_XNEG_PIN); 
-
-    //2) Debounce the signal
+    //1) Debounce the signal
     for (volatile uint32_t i=0; i<DEBOUNCE_TIME_ITERATIONS; i++) 
     {}
+
+    //2) Clear the interrupt
+    __HAL_GPIO_EXTI_CLEAR_IT(LIMIT_SWITCH_XNEG_PIN); 
 
     //3) If the X Neg limit switch is high, motor0 is going backwards, and the X Pos limit switch is low, go forwards
     //   Else If the X Neg limit switch is high and the X Pos limit switch is high, stop
@@ -193,12 +194,12 @@ void EXTI9_5_IRQHandler(void)
   //stop the motor and reverse it until the limit switch turns off
   if(__HAL_GPIO_EXTI_GET_IT(LIMIT_SWITCH_YPOS_PIN) != RESET)
   {
-    //1) Clear the interrupt
-    __HAL_GPIO_EXTI_CLEAR_IT(LIMIT_SWITCH_YPOS_PIN); 
-
-    //2) Debounce the signal
+    //1) Debounce the signal
     for (volatile uint32_t i=0; i<DEBOUNCE_TIME_ITERATIONS; i++) 
     {}
+
+    //2) Clear the interrupt
+    __HAL_GPIO_EXTI_CLEAR_IT(LIMIT_SWITCH_YPOS_PIN); 
 
     //3) If the Y Pos limit switch is high, motor1 is going fwd, and the Y Neg limit switch is llow, go backwards
     //   Else If the Y Pos limit switch is high and the Y Neg limit switch is high, stop
@@ -217,12 +218,12 @@ void EXTI9_5_IRQHandler(void)
   //stop the motor and reverse it until the limit switch turns off
   if(__HAL_GPIO_EXTI_GET_IT(LIMIT_SWITCH_YNEG_PIN) != RESET)
   {
-    //1) Clear the interrupt
-    __HAL_GPIO_EXTI_CLEAR_IT(LIMIT_SWITCH_YNEG_PIN); 
-
-    //2) Debounce the signal 
+    //1) Debounce the signal 
     for (volatile uint32_t i=0; i<DEBOUNCE_TIME_ITERATIONS; i++) 
     {}
+
+    //2) Clear the interrupt
+    __HAL_GPIO_EXTI_CLEAR_IT(LIMIT_SWITCH_YNEG_PIN); 
 
     //3) If the Y Neg limit switch is high, motor1 is going backwards, and the Y Pos limit switch is low, go forwards
     //   Else If the Y Neg limit switch is high and the Y Pos limit switch is high, stop

@@ -91,9 +91,17 @@ uint32_t adc_offset = 0;
 double adc_gain = 1.0;
 
 //Motor Running Variable
-volatile eL6470_MotorRuning_t g_curr_motor;
+volatile eL6470_MotorRuning_t g_curr_motor = 1;
 
 /* Static Variables */
+typedef enum
+{
+  Fast_Forward = 0,
+  Slow_Forward, 
+  Stopped,
+  Slow_Reverse,
+  Fast_Reverse
+} MotorSpeedDirectionRange;
 
 /* Global Function Prototypes */
 uint16_t ADC_Calibrated_Read();
@@ -176,49 +184,85 @@ int main(void)
   //g_curr_motor = L6470_MOTOR0;
 
   /* Create variable to store and print ADC values*/
-  char adc_buffer[20];
-  uint16_t adc_value;
+  char adc_buffer[50];
+  volatile uint16_t adc_value;
+  volatile MotorSpeedDirectionRange curr_adc_range = Stopped;
+  volatile MotorSpeedDirectionRange prev_adc_range = Stopped;
 
-  L6470_Run(MOTOR_X, L6470_DIR_FWD_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
+  L6470_Run(MOTOR_Y, L6470_DIR_FWD_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
 
   /* Infinite loop */
   while (1)
   {
     /* Check if any Application Command for L6470 has been entered by USART */
     // USART_CheckAppCmd();
-
-    //sprintf(adc_buffer, "%d\r\n", adc_value);
-    //USART_Transmit(&huart2, adc_buffer);
-    //HAL_Delay(100);
     
     //Read the current ADC Value
     adc_value = ADC_Calibrated_Read();
 
+    sprintf(adc_buffer, "%d\r\n", adc_value);
+    //USART_Transmit(&huart2, adc_buffer);
+
     //If the ADC reading is between 0 and the FWD  drive FWD and fast
     if (adc_value < FAST_FWD_THRESHOLD_ADC)
     {
-      L6470_Run(g_curr_motor, L6470_DIR_FWD_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
+      curr_adc_range = Fast_Forward;
     }
     //If the ADC reading is between A and B bits drive FWD and slowly
     else if (adc_value < SLOW_FWD_THRESHOLD_ADC)
     {
-      L6470_Run(g_curr_motor, L6470_DIR_FWD_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
+      curr_adc_range = Slow_Forward;
     }
     //If the ADC reading is between B and C bits, stop
     else if (adc_value < STOP_THRESHOLD_ADC)
     {
-      L6470_HardStop(g_curr_motor);
+      curr_adc_range = Stopped;
     }
     //If the ADC reading is between C and D bits drive REV and slowly
     else if (adc_value < SLOW_REV_THRESHOLD_ADC)
     {
-      L6470_Run(g_curr_motor, L6470_DIR_REV_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
+      curr_adc_range = Slow_Reverse;
     }
     //If the ADC reading is greater than the REV fast speed threshold drive REV and slowly
     else
     {
-      L6470_Run(g_curr_motor, L6470_DIR_REV_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
+      curr_adc_range = Fast_Reverse;
     }
+
+    //If the ADC value is a new range, change to the according direction
+    if (curr_adc_range != prev_adc_range)
+    {
+      switch (curr_adc_range)
+      {
+        case Fast_Forward:
+          L6470_Run(g_curr_motor, L6470_DIR_FWD_ID, L6470_SPEED_CONV * L6470_FAST_SPEED);
+          break;
+
+        case Slow_Forward:
+          L6470_Run(g_curr_motor, L6470_DIR_FWD_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
+          break;
+
+        case Stopped:
+          L6470_HardStop(g_curr_motor);
+          break;
+
+        case Slow_Reverse:
+          L6470_Run(g_curr_motor, L6470_DIR_REV_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
+          break;
+
+        case Fast_Reverse:
+          L6470_Run(g_curr_motor, L6470_DIR_REV_ID, L6470_SPEED_CONV * L6470_FAST_SPEED);
+          break;
+        
+        default:
+          L6470_HardStop(g_curr_motor);
+          break;
+      }
+
+      //Update the prev adc range to be the current one
+      prev_adc_range = curr_adc_range;
+    }
+
   }
 #endif
 }
