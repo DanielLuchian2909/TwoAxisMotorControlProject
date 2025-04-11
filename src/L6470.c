@@ -883,6 +883,12 @@ uint32_t L6470_GetParam(uint8_t L6470_Id, eL6470_RegId_t L6470_RegId)
  */
 void L6470_Run(uint8_t L6470_Id, eL6470_DirId_t L6470_DirId, uint32_t Speed)
 {
+  //If a run command is sent to Motor 1 (Controlling Y Axis), adjust the speed, 
+  //due to the Y Axis having more resistance causing the Y Axis Motor to move slower
+  if (L6470_Id == 1)
+  {
+    Speed *= 4;
+  }
   L6470_PrepareAppCmdPkg(L6470_Id, L6470_AppCmdPkg, L6470_RUN_ID, L6470_DirId, Speed, 0);
   L6470_PrepareDaisyChainCommand(L6470_AppCmdPkg, (uint8_t *)L6470_DaisyChainSpiTxStruct);
   L6470_DaisyChainCommand((uint8_t *)L6470_DaisyChainSpiTxStruct, (uint8_t *)L6470_DaisyChainSpiRxStruct);
