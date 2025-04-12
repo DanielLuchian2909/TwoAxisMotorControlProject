@@ -56,6 +56,8 @@
   * @{
   */
 
+/**   Cannot touch 0 and 1 handler
+  */
 void EXTI0_IRQHandler(void);
 void EXTI1_IRQHandler(void);
 void EXTI4_IRQHandler(void);
