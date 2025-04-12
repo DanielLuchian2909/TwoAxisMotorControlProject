@@ -212,6 +212,12 @@ typedef enum
   L6470_WRONG_OR_NON_PERFORMABLE_COMMAND  = 0x80  //!< Wrong or non-performable command
 } eL6470_AlarmCondition_t;
 
+typedef enum
+{
+  L6470_MOTOR0 = 0,
+  L6470_MOTOR1
+} eL6470_MotorRuning_t;
+
 /**
   * @brief The L6470 STEP_MODE Register (see L6470 DataSheet for more details).
   */

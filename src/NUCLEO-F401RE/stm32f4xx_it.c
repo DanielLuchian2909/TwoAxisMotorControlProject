@@ -35,6 +35,32 @@
 #include "stm32f4xx_it.h"
 #include "xnucleoihm02a1_interface.h"
 #include "example_usart.h"
+#include "L6470.h"
+
+/* Defines ------------------------------------------------------------------*/
+#define DEBOUNCE_TIME_ITERATIONS 200000
+
+//X positive limit switch - Returns true if high (pressed), false if low (not pressed)
+#define IsLimitSwitchXPosHigh() (HAL_GPIO_ReadPin(LIMIT_SWITCH_XPOS_PORT, LIMIT_SWITCH_XPOS_PIN) == GPIO_PIN_SET)
+
+//X negative limit switch - Returns true if high (pressed), false if low (not pressed)
+#define IsLimitSwitchXNegHigh() (HAL_GPIO_ReadPin(LIMIT_SWITCH_XNEG_PORT, LIMIT_SWITCH_XNEG_PIN) == GPIO_PIN_SET)
+
+//Y positive limit switch - Returns true if high (pressed), false if low (not pressed)
+#define IsLimitSwitchYPosHigh() (HAL_GPIO_ReadPin(LIMIT_SWITCH_YPOS_PORT, LIMIT_SWITCH_YPOS_PIN) == GPIO_PIN_SET)
+
+//Y negative limit switch - Returns true if high (pressed), false if low (not pressed)
+#define IsLimitSwitchYNegHigh() (HAL_GPIO_ReadPin(LIMIT_SWITCH_YNEG_PORT, LIMIT_SWITCH_YNEG_PIN) == GPIO_PIN_SET)
+
+//Axis switch - Returns true if high (pressed), false if low (not pressed)
+#define IsAxisSwitchHigh() (HAL_GPIO_ReadPin(AXIS_SWITCH_PORT, AXIS_SWITCH_PIN) == GPIO_PIN_SET)
+
+//Check if MX is moving forward (returns 1) or backward (returns 0) using enum for direction
+#define IsMotorXMovingForward() (L6470_CheckStatusRegisterFlag(MOTOR_X, DIR_ID) == L6470_DIR_FWD_ID)
+
+//Check if MY is moving forward (returns 1) or backward (returns 0) using enum for direction
+#define IsMotorYMovingForward() (L6470_CheckStatusRegisterFlag(MOTOR_Y, DIR_ID) == L6470_DIR_FWD_ID)
+
 
 /**
   * @addtogroup MicrosteppingMotor_Example
@@ -85,6 +111,131 @@ void EXTI1_IRQHandler(void)
 void EXTI0_IRQHandler(void)
 {
   HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
+}
+
+/**
+* @brief This function handles EXTI Line4 interrupt.
+*/
+void EXTI4_IRQHandler(void)
+{
+  if(__HAL_GPIO_EXTI_GET_IT(AXIS_SWITCH_PIN) != RESET)
+  {
+
+    //1) Debounce the signal
+    for (volatile uint32_t j=0; j<DEBOUNCE_TIME_ITERATIONS; j++) 
+    {}
+        
+    //2) Clear the interrupt
+    __HAL_GPIO_EXTI_CLEAR_IT(AXIS_SWITCH_PIN); 
+
+    //3) If interrupt is still high stop the motor and switch the current motor to the other one
+    if (IsAxisSwitchHigh())
+    {
+      L6470_HardStop(g_curr_motor);
+      g_curr_motor = !g_curr_motor;
+    }
+  } 
+}
+
+/**
+ * @brief This function handles EXTI Line[9:5] interrupt.
+ */
+void EXTI9_5_IRQHandler(void)
+{
+  //If the limit switch for the positive x-axis (M0) is triggered, 
+  //stop the motor and reverse it until the limit switch turns off
+  if(__HAL_GPIO_EXTI_GET_IT(LIMIT_SWITCH_XPOS_PIN) != RESET)
+  {
+    //1) Debounce the signal
+    for (volatile uint32_t i=0; i<DEBOUNCE_TIME_ITERATIONS; i++) 
+    {}
+
+    //2) Clear the interrupt
+    __HAL_GPIO_EXTI_CLEAR_IT(LIMIT_SWITCH_XPOS_PIN); 
+    
+    //3) If the X Pos limit switch is high, motor0 is going fwd, and the X Neg limit switch is low, go backwards
+    //   Else If the X Pos limit switch is high and the X Neg limit switch is high, stop
+    if ( IsLimitSwitchXPosHigh() && (!IsLimitSwitchXNegHigh()) && IsMotorXMovingForward() )
+    {
+      L6470_Run(MOTOR_X, L6470_DIR_REV_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
+    }
+    else if (IsLimitSwitchXPosHigh() && IsLimitSwitchXNegHigh())
+    {
+      L6470_HardStop(MOTOR_X);
+    }
+  }
+
+
+  //If the limit switch for the negative x-axis (M0) is triggered, 
+  //stop the motor and reverse it until the limit switch turns off
+  if(__HAL_GPIO_EXTI_GET_IT(LIMIT_SWITCH_XNEG_PIN) != RESET)
+  {
+    //1) Debounce the signal
+    for (volatile uint32_t i=0; i<DEBOUNCE_TIME_ITERATIONS; i++) 
+    {}
+
+    //2) Clear the interrupt
+    __HAL_GPIO_EXTI_CLEAR_IT(LIMIT_SWITCH_XNEG_PIN); 
+
+    //3) If the X Neg limit switch is high, motor0 is going backwards, and the X Pos limit switch is low, go forwards
+    //   Else If the X Neg limit switch is high and the X Pos limit switch is high, stop
+    if ( IsLimitSwitchXNegHigh() && (!IsLimitSwitchXPosHigh()) && (!IsMotorXMovingForward()) ) 
+    {
+      L6470_Run(MOTOR_X, L6470_DIR_FWD_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
+    }
+    else if (IsLimitSwitchXPosHigh() && IsLimitSwitchXNegHigh())
+    {
+      L6470_HardStop(MOTOR_X);
+    }
+  }
+
+
+  //If the limit switch for the positive y-axis (M1) is triggered, 
+  //stop the motor and reverse it until the limit switch turns off
+  if(__HAL_GPIO_EXTI_GET_IT(LIMIT_SWITCH_YPOS_PIN) != RESET)
+  {
+    //1) Debounce the signal
+    for (volatile uint32_t i=0; i<DEBOUNCE_TIME_ITERATIONS; i++) 
+    {}
+
+    //2) Clear the interrupt
+    __HAL_GPIO_EXTI_CLEAR_IT(LIMIT_SWITCH_YPOS_PIN); 
+
+    //3) If the Y Pos limit switch is high, motor1 is going fwd, and the Y Neg limit switch is llow, go backwards
+    //   Else If the Y Pos limit switch is high and the Y Neg limit switch is high, stop
+    if ( IsLimitSwitchYPosHigh() && (!IsLimitSwitchYNegHigh()) && IsMotorYMovingForward())
+    {
+      L6470_Run(MOTOR_Y, L6470_DIR_REV_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
+    }
+    else if ( IsLimitSwitchYPosHigh() && IsLimitSwitchYNegHigh() )
+    {
+      L6470_HardStop(MOTOR_Y);
+    }
+  }
+
+
+  //If the limit switch for the negative y-axis (M1) is triggered, 
+  //stop the motor and reverse it until the limit switch turns off
+  if(__HAL_GPIO_EXTI_GET_IT(LIMIT_SWITCH_YNEG_PIN) != RESET)
+  {
+    //1) Debounce the signal 
+    for (volatile uint32_t i=0; i<DEBOUNCE_TIME_ITERATIONS; i++) 
+    {}
+
+    //2) Clear the interrupt
+    __HAL_GPIO_EXTI_CLEAR_IT(LIMIT_SWITCH_YNEG_PIN); 
+
+    //3) If the Y Neg limit switch is high, motor1 is going backwards, and the Y Pos limit switch is low, go forwards
+    //   Else If the Y Neg limit switch is high and the Y Pos limit switch is high, stop
+    if ( IsLimitSwitchYNegHigh() && (!IsLimitSwitchYPosHigh()) && (!IsMotorYMovingForward()) )
+    {
+      L6470_Run(MOTOR_Y, L6470_DIR_FWD_ID, L6470_SPEED_CONV * L6470_SLOW_SPEED);
+    }
+    else if (IsLimitSwitchYPosHigh() && IsLimitSwitchYNegHigh())
+    {
+      L6470_HardStop(MOTOR_Y);
+    }
+  } 
 }
 
 /**
