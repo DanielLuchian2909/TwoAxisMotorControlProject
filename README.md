@@ -1,7 +1,7 @@
 
 # TwoAxisMotorControlProject
 
-This repository is forked from the UWaterloo MTE325 lab repo and developed by Daniel Luchian, Jarryd Ross, and Robson Lamond. It contains the firmware for a two axis motor control system, developed for a lab/course project for [MTE325-Microprocessor Systems and Interfacing](https://uwflow.com/course/mte325).
+This repository is forked from the UWaterloo MTE325 lab repo and developed by Daniel Luchian, Jarryd Ross, and Robson Lamond. It contains the firmware for a two-axis motor control system, developed for a lab/course project for [MTE325-Microprocessor Systems and Interfacing](https://uwflow.com/course/mte325).
 
 
 ## Table of Contents
