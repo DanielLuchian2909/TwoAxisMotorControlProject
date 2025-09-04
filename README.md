@@ -23,7 +23,7 @@ This repository is forked from the UWaterloo MTE325 lab repo and developed by Da
 ### Project Goal
 
 ### Design Breakdown
-insert control flow chart here
+![Motor Control Flow Chart Failed to Load](DevelopmentDocs/MotorControlLoopFlowChart.pdf)
 
 ## Project Hardware and Tools
 
@@ -31,7 +31,7 @@ insert control flow chart here
 insert picture of physical setup here
 
 ### Pinout
-insert block diagram and mcu pinout here
+![Pinout Failed to Load](DevelopmentDocs/SystemBlockDiagram.pdf)
 
 ### Development Environment
 
