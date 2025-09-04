@@ -36,6 +36,7 @@
 #include "xnucleoihm02a1_interface.h"
 #include "example_usart.h"
 #include "L6470.h"
+#include "gpio_config.h"
 
 /* Defines ------------------------------------------------------------------*/
 #define DEBOUNCE_TIME_ITERATIONS 200000
@@ -245,21 +246,6 @@ void USART2_IRQHandler(void)
 {
   HAL_UART_IRQHandler(&huart2);
   USART_ITCharManager(&huart2);
-}
-
-/**
- * @brief This function handles the EXTI Line 9 - 5 interrupt
- */
-void EXTI9_5_IRQHandler(void)
-{
-  if(__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_8) != RESET)
-  {
-    __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_8);
-    
-    //If the pin is currently high than a rising edge was detected, so toggle the LED
-    HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
-    HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
-  }
 }
 
 /**

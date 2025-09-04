@@ -32,13 +32,24 @@
  ******************************************************************************
  */
 
-// test git
-
+/************************************
+ * INCLUDES
+ ************************************/
 #include "example.h"
 #include "example_usart.h"
 #include "L6470.h"
-#include "stdio.h"
+#include "adc.h"
+#include "gpio_config.h"
 
+#include <stdio.h>
+
+/************************************
+ * EXTERN VARIABLES
+ ************************************/
+
+/************************************
+ * PRIVATE MACROS AND DEFINES
+ ************************************/
 /**
  * @defgroup   MotionControl
  * @{
@@ -76,22 +87,17 @@
 #endif
 
 /* Macros and Defines */
-#define ADC1_RESOLUTION_BITS 1023
-
 #define FAST_FWD_THRESHOLD_ADC ADC1_RESOLUTION_BITS / 5
 #define SLOW_FWD_THRESHOLD_ADC ADC1_RESOLUTION_BITS / 5 * 2
 #define STOP_THRESHOLD_ADC ADC1_RESOLUTION_BITS / 5 * 3
 #define SLOW_REV_THRESHOLD_ADC ADC1_RESOLUTION_BITS / 5 * 4
 
-// #define ENABLE_ADC_CALIBRATION //Comment to disable calibration
+#define ENABLE_ADC_CALIBRATION //Comment to disable calibration
 
-/* Global Variables */
-uint32_t adc_offset = 0;                          //Calculated offset for the ADC
-double adc_gain = 1.0;                            //Calculated gain for the ADC
-volatile eL6470_MotorRuning_t g_curr_motor = 0;   //Global variable to indicate which motor is currently running
-
-/* Static Variables */
-//Enumeration of motor speed ranges
+/************************************
+ * PRIVATE TYPEDEFS
+ ************************************/
+//Enum of motor speed ranges
 typedef enum
 {
   Fast_Forward = 0,
@@ -101,17 +107,27 @@ typedef enum
   Fast_Reverse
 } MotorSpeedDirectionRange;
 
-/* Global Function Prototypes */
-uint16_t ADC1_Calibrated_Read();     //Reads one value of ADC1
-int __io_putchar(int ch);            //General put char function
+/************************************
+ * STATIC VARIABLES
+ ************************************/
 
-/* Static Function Prototypes */ 
-static void GPIO_LimitSwitch_Init(void);          //Initializes GPIO pins for the limit switches
-static void GPIO_ADC1_Init(void);                 //Initializes the pin for ADC1
-static void GPIO_AxisSwitch_Init(void);           //Initializes pin for changing curently controlled motor
+/************************************
+ * GLOBAL VARIABLES
+ ************************************/
+volatile eL6470_MotorRuning_t g_curr_motor = 0;   //Global variable to indicate which motor is currently running
 
-static void ADC1_Calculate_Offset();  //Calculates the offset of ADC1
-static void ADC1_Calculate_Gain(float input_voltage); //Calculates gain of ADC1
+/************************************
+ * STATIC FUNCTION PROTOTYPES
+ ************************************/
+
+/************************************
+ * STATIC FUNCTIONS
+ ************************************/
+
+/************************************
+ * GLOBAL FUNCTIONS
+ ************************************/
+int __io_putchar(int ch); 
 
 /**
  * @}
@@ -154,26 +170,21 @@ int main(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
 
-  /* Init the GPIO pins for the limit switches */
+  /* Init the GPIO pins for the limit switches, motor switching, and ADC */
   GPIO_LimitSwitch_Init();
-
-  /* Init the GPIO pin for motor switching */
   GPIO_AxisSwitch_Init();
-
-  /* Init the pin for the ADC */
   GPIO_ADC1_Init();
 
-  /* Configure EXTI Line[9:5] and Line[4] interrupt priority */
+  /* Configure and enable EXTI Line[9:5] and Line[4] interrupt priority */
   HAL_NVIC_SetPriority(EXTI4_IRQn, 2, 0);
-  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 1, 0);
-
-  /* Enable EXTI Line[9:5] and Line[4] interrupt */
   HAL_NVIC_EnableIRQ(EXTI4_IRQn);
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 1, 0);
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
   /* Intialize, Calibrate and Start ADC1 */
   MX_ADC1_Init();
   HAL_ADC_Start(&hadc1);
+
 #ifdef ENABLE_ADC_CALIBRATION
   ADC1_Calculate_Offset();
   ADC1_Calculate_Gain(3.3);
@@ -197,7 +208,6 @@ int main(void)
 
     /* Step 1: Read ADC1 Value */
     adc_value = ADC1_Calibrated_Read();
-
 
     /* Step 2: Check then update the current speed+direction range correspondingly */
     if (adc_value < FAST_FWD_THRESHOLD_ADC)
@@ -260,7 +270,6 @@ int main(void)
     sprintf(adc_buffer, "ADC Value: %d Motor Running:%d Motor Mode: %d\r\n", adc_value, g_curr_motor, curr_adc_range);
     USART_Transmit(&huart2, adc_buffer);
 
-    //100 ms delay
     HAL_Delay(100);
   }
 #endif
@@ -284,134 +293,6 @@ void assert_failed(uint8_t *file, uint32_t line)
 }
 
 #endif
-
-/**
- * @brief Initiliaze the gpio pins for interrupt lines for the limit switches
- * @param None
- * @retval None
- */
-static void GPIO_LimitSwitch_Init(void)
-{
-  /* Configure limit switch positive x-axis (M0) GPIO using pin PA8 */
-  GPIO_InitTypeDef GPIO_InitStruct_LimitSwitch_XPos;
-  GPIO_InitStruct_LimitSwitch_XPos.Pin = LIMIT_SWITCH_XPOS_PIN;
-  GPIO_InitStruct_LimitSwitch_XPos.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct_LimitSwitch_XPos.Pull = GPIO_PULLUP;
-  GPIO_InitStruct_LimitSwitch_XPos.Speed = GPIO_SPEED_FAST;
-  HAL_GPIO_Init(LIMIT_SWITCH_XPOS_PORT, &GPIO_InitStruct_LimitSwitch_XPos);
-
-  /* Configure limit switch negative x-axis (M0) GPIO using pin PA9 */
-  GPIO_InitTypeDef GPIO_InitStruct_LimitSwitch_XNeg;
-  GPIO_InitStruct_LimitSwitch_XNeg.Pin = LIMIT_SWITCH_XNEG_PIN;
-  GPIO_InitStruct_LimitSwitch_XNeg.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct_LimitSwitch_XNeg.Pull = GPIO_PULLUP;
-  GPIO_InitStruct_LimitSwitch_XNeg.Speed = GPIO_SPEED_FAST;
-  HAL_GPIO_Init(LIMIT_SWITCH_XNEG_PORT, &GPIO_InitStruct_LimitSwitch_XNeg);
-
-  /* Configure limit switch positive y-axis (M1) GPIO using pin PB6 */
-  GPIO_InitTypeDef GPIO_InitStruct_LimitSwitch_YPos;
-  GPIO_InitStruct_LimitSwitch_YPos.Pin = LIMIT_SWITCH_YPOS_PIN;
-  GPIO_InitStruct_LimitSwitch_YPos.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct_LimitSwitch_YPos.Pull = GPIO_PULLUP;
-  GPIO_InitStruct_LimitSwitch_YPos.Speed = GPIO_SPEED_FAST;
-  HAL_GPIO_Init(LIMIT_SWITCH_YPOS_PORT, &GPIO_InitStruct_LimitSwitch_YPos);
-
-  /* Configure limit switch negative x-axis (M1) GPIO using pin PB7 */
-  GPIO_InitTypeDef GPIO_InitStruct_LimitSwitch_YNeg;
-  GPIO_InitStruct_LimitSwitch_YNeg.Pin = LIMIT_SWITCH_YNEG_PIN;
-  GPIO_InitStruct_LimitSwitch_YNeg.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct_LimitSwitch_YNeg.Pull = GPIO_PULLUP;
-  GPIO_InitStruct_LimitSwitch_YNeg.Speed = GPIO_SPEED_FAST;
-  HAL_GPIO_Init(LIMIT_SWITCH_YNEG_PORT, &GPIO_InitStruct_LimitSwitch_YNeg);
-}
-
-/**
- * @brief Initiliaze the GPIO pin for the interrupt line for switching axis
- * @param None
- * @retval None
- */
-static void GPIO_AxisSwitch_Init(void)
-{
-  /* Configure the interrupt pin for the motor direction */
-  GPIO_InitTypeDef GPIO_InitStruct_Axis_Switch;
-  GPIO_InitStruct_Axis_Switch.Pin = AXIS_SWITCH_PIN;
-  GPIO_InitStruct_Axis_Switch.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct_Axis_Switch.Pull = GPIO_PULLUP;
-  GPIO_InitStruct_Axis_Switch.Speed = GPIO_SPEED_FAST;
-  HAL_GPIO_Init(AXIS_SWITCH_PORT, &GPIO_InitStruct_Axis_Switch);
-}
-
-/**
- * @brief Initiliaze the ADC
- * @param None
- * @retval None
- */
-static void GPIO_ADC1_Init(void)
-{
-  /* Configure Pin for ADC*/
-  GPIO_InitTypeDef GPIO_InitStruct_ADC;
-  GPIO_InitStruct_ADC.Pin = GPIO_PIN_0;
-  GPIO_InitStruct_ADC.Mode = GPIO_MODE_ANALOG;
-  GPIO_InitStruct_ADC.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct_ADC);
-}
-
-/**
- * @brief Calculate ADC offset
- * @param None
- * @retval None
- */
-static void ADC1_Calculate_Offset()
-{
-  // Sum of 100 readings
-  uint32_t sum = 0;
-
-  // Average 100 readings for better accuracy
-  for (int i = 0; i < 100; i++)
-  {
-    HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-    sum += HAL_ADC_GetValue(&hadc1);
-  }
-
-  // Store the offset value in global variable
-  adc_offset = sum / 100;
-}
-
-/**
- * @brief Calculate ADC gain
- * @param input_voltage, the ideal voltage at the ADC
- * @retval None
- */
-static void ADC1_Calculate_Gain(float input_voltage)
-{
-  //
-  HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-  uint32_t raw_adc = HAL_ADC_GetValue(&hadc1);
-  float offset_corrected_value = (float)raw_adc - adc_offset;
-
-  float measured_voltage = (offset_corrected_value / 1023.0f) * 3.3f;
-  adc_gain = input_voltage / measured_voltage;
-}
-
-/**
- * @brief Read ADC1 Value
- * @param None
- * @retval Calibrated ADC1 Value
- */
-uint16_t ADC1_Calibrated_Read()
-{
-  // Poll ADC1 for a value
-  HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-  uint32_t raw_adc = HAL_ADC_GetValue(&hadc1);
-
-  // Correct the reading
-  float offset_corrected_value = (float)raw_adc - adc_offset;
-  float offset_corrected_voltage = (offset_corrected_value / 1023.0f) * 3.3f;
-  float corrected_voltage = offset_corrected_voltage * adc_gain;
-
-  //Return the reading
-  return (uint16_t)((corrected_voltage / 3.3f) * 1023);
-}
 
 /**
  * @brief Putchar Function

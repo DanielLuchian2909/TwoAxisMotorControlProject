@@ -44,6 +44,7 @@ extern "C"
 
 /* Includes ------------------------------------------------------------------*/
 #include "microstepping_motor.h"
+#include "gpio_config.h"
 
   /**
    * @addtogroup BSP
@@ -126,35 +127,9 @@ extern "C"
    */
   /* End of L6470_Exported_Types */
 
-    /**
-   * @defgroup   Limit Switch Pins
-   * @brief      The corresponding pins and ports for the limit switches
-   * @{
-   */
-
-#define LIMIT_SWITCH_XPOS_PORT GPIOA
-#define LIMIT_SWITCH_XPOS_PIN GPIO_PIN_8
-
-#define LIMIT_SWITCH_XNEG_PORT GPIOA
-#define LIMIT_SWITCH_XNEG_PIN GPIO_PIN_9
-
-#define LIMIT_SWITCH_YPOS_PORT GPIOB
-#define LIMIT_SWITCH_YPOS_PIN GPIO_PIN_6
-
-#define LIMIT_SWITCH_YNEG_PORT GPIOC
-#define LIMIT_SWITCH_YNEG_PIN GPIO_PIN_7
-
-#define AXIS_SWITCH_PORT GPIOB
-#define AXIS_SWITCH_PIN GPIO_PIN_4
-
 #define MOTOR_X 0
 #define MOTOR_Y 1
    
-    /**
-   * @}
-   */
-  /* End of Limit Switch Pins */
-
   /**
    * @defgroup   L6470_Exported_Macros
    * @brief      L6470 Exported Macros.
