@@ -28,8 +28,8 @@ This repository is forked from the UWaterloo MTE325 lab repo and developed by Da
 ## Project Hardware and Tools
 
 ### Hardware Used
-![Project Setup Failed to Load](DevelopmentDocs/ProjectSetup.JPG)
-![User Controller Setup Failed to Load](DevelopmentDocs/UserControlSetup.JPG)
+![Project Setup Failed to Load](DevelopmentDocs/ProjectSetup.jpg)
+![User Controller Setup Failed to Load](DevelopmentDocs/UserControlSetup.jpg)
 
 ### Pinout
 ![Pinout Failed to Load](DevelopmentDocs/SystemBlockPinoutDiagram.png)
