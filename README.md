@@ -23,7 +23,7 @@ This repository is forked from the UWaterloo MTE325 lab repo and developed by Da
 ### Project Goal
 
 ### Design Breakdown
-![Motor Control Flow Chart Failed to Load](DevelopmentDocs/MotorControlLoopFlowChart.png)
+[See for the motor control flow chart](DevelopmentDocs/MotorControlLoopFlowChart.png)
 
 ## Project Hardware and Tools
 
